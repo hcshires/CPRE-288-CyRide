@@ -5,33 +5,7 @@
  * Detect objects, move autonomously, etc.
  */
 
-/* CyBot Subsystems */
-#include "adc.h"
-#include "button.h"
-#include "lcd.h"
-#include "movement.h"
-#include "open_interface.h"
-#include "ping.h"
-#include "servo.h"
-#include "Timer.h"
-#include "uart.h"
-
-/* C Libraries */
-#include <math.h>
-
-// Typedef struct - Obstacle properties such as angle located, distance away from robot, width, and linear width
-typedef struct Obstacle
-{
-    int startAngle;
-    int endAngle;
-    int angle; // Angle at the midpoint of object
-    int startDist;
-    int endDist;
-    int dist;
-    int ping;
-    int width;
-    int linearWidth;
-} Obstacle;
+#include "helpers.h"
 
 volatile char flag; // Your UART interrupt can update this flag
 int STOP_DIST;

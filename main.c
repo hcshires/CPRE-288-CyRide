@@ -7,17 +7,6 @@
  * Authors: Henry Shires, Tyler Smith, Emile Albert Kum Chi, and Cael O'Reagan
  */
 
-/* CyBot Subsystems */
-#include "adc.h"
-#include "button.h"
-#include "lcd.h"
-#include "movement.h"
-#include "open_interface.h"
-#include "ping.h"
-#include "servo.h"
-#include "Timer.h"
-#include "uart.h"
-
 /* CyBot Helper Functions */
 #include "helpers.h"
 

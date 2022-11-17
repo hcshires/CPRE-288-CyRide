@@ -150,3 +150,7 @@ int move_forward_bump_auto(oi_t *sensor, int millimeters, int angle) {
     stop();
     return bumped;
 }
+
+void avoid_cliff(oi_t *sensor) {
+
+}
