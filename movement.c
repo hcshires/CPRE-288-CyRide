@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-volatile char flag; // Your UART interrupt can update this flag
+volatile char FLAG; // Your UART interrupt can update this flag
 
 void stop() {
-    flag = 0;
+    FLAG = 0;
     oi_setWheels(0, 0);
 }
 
@@ -15,7 +15,7 @@ void move_forward(oi_t *sensor, int millimeters)
     oi_setWheels(100, 100); // move full speed ahead
 
     double sum = 0;
-    while (sum < millimeters && !flag) {
+    while (sum < millimeters && !FLAG) {
         sum += sensor->distance;
         oi_update(sensor);
     }
@@ -28,7 +28,7 @@ void move_backward(oi_t *sensor, int millimeters)
     oi_setWheels(-100, -100); // move full speed back
 
     double sum = 0;
-    while (sum < millimeters && !flag) {
+    while (sum < millimeters && !FLAG) {
         sum -= sensor->distance;
         oi_update(sensor);
     }
@@ -41,7 +41,7 @@ void turn_clockwise(oi_t *sensor, int degrees)
     oi_setWheels(-100, 100); // turn via one wheel only
 
     double angle = 0;
-    while (abs(angle)  < degrees && !flag) { // checking the angle to make sure not to surpass the user specifies
+    while (abs(angle)  < degrees && !FLAG) { // checking the angle to make sure not to surpass the user specifies
       angle += sensor->angle;
       oi_update(sensor);
     }
@@ -54,7 +54,7 @@ void turn_counterclockwise(oi_t *sensor, int degrees)
     oi_setWheels(100, -100); // turn via one wheel only
 
     double angle = 0;
-    while (abs(angle) < degrees && !flag) { // checking the angle to make sure not to surpass the user specifies
+    while (abs(angle) < degrees && !FLAG) { // checking the angle to make sure not to surpass the user specifies
        angle += sensor->angle;
        oi_update(sensor);
     }
@@ -109,7 +109,7 @@ void move_forward_bump(oi_t *sensor, int millimeters) {
     oi_setWheels(100, 100); // Set power and drive baby
 
     double sum = 0;
-    while (sum < millimeters && !flag) {
+    while (sum < millimeters && !FLAG) {
         sum += sensor->distance;
         oi_update(sensor);
 
@@ -134,7 +134,7 @@ int move_forward_bump_auto(oi_t *sensor, int millimeters, int angle) {
     int bumped = 0;
 
     double sum = 0;
-    while (sum < millimeters && !flag) {
+    while (sum < millimeters && !FLAG) {
         sum += sensor->distance;
         oi_update(sensor);
 
@@ -149,8 +149,4 @@ int move_forward_bump_auto(oi_t *sensor, int millimeters, int angle) {
 
     stop();
     return bumped;
-}
-
-void avoid_cliff(oi_t *sensor) {
-
 }

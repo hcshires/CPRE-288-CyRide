@@ -89,16 +89,15 @@ int ping_read(void) {
     send_pulse();
 
     // Interrupts to wait for signal
-    while (!flag);
+    while (!FLAG);
     int startTime = time;
-    flag = 0;
+    FLAG = 0;
 
-    while (!flag);
+    while (!FLAG);
     int endTime = time;
-    flag = 0;
+    FLAG = 0;
 
     int delta;
-    char output[100];
 
     // Detect a timer overflow (negative pulse width)
     if (startTime < endTime) {
@@ -114,13 +113,13 @@ int ping_read(void) {
     /* LCD Output */
     double time = ((double)(delta / 2) / 16000000); // Time (ms)
     int dist = time * 34000; // Distance away (cm)
-    lcd_printf("%d clk cycles\nTime: %lf ms\nDistance: %d cm\nOverflows: %d\n", delta, time * 1000, dist, overflowCount);
+//    lcd_printf("%d clk cycles\nTime: %lf ms\nDistance: %d cm\nOverflows: %d\n", delta, time * 1000, dist, overflowCount);
 
-    /* Debug: Distance is still accurate with overflow occurrences */
-    if (startTime < endTime) {
-        sprintf(output, "Overflow detected: %d %d\n\r", delta, dist);
-        uart_sendStr(output);
-    }
+//    /* Debug: Distance is still accurate with overflow occurrences */
+//    if (startTime < endTime) {
+//        sprintf(output, "Overflow detected: %d %d\n\r", delta, dist);
+//        uart_sendStr(output);
+//    }
 
     return dist;
 }
@@ -133,6 +132,6 @@ void TIMER3B_Handler(void) {
     if (TIMER3_MIS_R & 0b0000011000000000) {
         time = TIMER3_TBR_R; // Read the sensor
         TIMER3_ICR_R |= 0b0000011000000000; // Interrupt Clear
-        flag = 1; // Throw flag
+        FLAG = 1; // Throw flag
     }
 }

@@ -11,4 +11,3 @@ void turn_counterclockwise(oi_t *sensor, int degrees);
 void turn_clockwise(oi_t *sensor, int degrees);
 
 void avoid_bump(oi_t *sensor, int direction);
-void avoid_cliff(oi_t *sensor);

@@ -54,7 +54,7 @@ void uart_init(int baud)
     UART1_CC_R   = 0x0; // use system clock as clock source (page 939)
     UART1_CTL_R |= 0x0001; // enable UART1
 
-    flag = 0;
+    FLAG = 0;
 }
 
 void uart_sendChar(char data)
@@ -106,6 +106,6 @@ void uart_interrupt_handler()
         // uart_data = UART1_DR_R;
 
         UART1_ICR_R |= 0b00010000; // STEP 3: Interrupt Clear
-        flag = 1; // Throw flag
+        FLAG = 1; // Throw flag
     }
 }

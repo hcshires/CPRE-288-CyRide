@@ -11,7 +11,8 @@
 #include "helpers.h"
 
 /* Global Variables and Flags */
-volatile char flag;
+volatile char FLAG;
+volatile char quit; // Stop the program
 
 /**
  * Utilize the CyBot PING))) sensor with a custom library
@@ -32,71 +33,25 @@ void main() {
     sensor_data = oi_alloc();
     oi_init(sensor_data);
 
-    int robotMode = 0; // Flag to store if robot is in auto mode (1) or manual mode (0)
-
-    /* Program Main Thread */
-
-    // Define the start position and know where it is at all times
-    // Define the location of each stop
-    //
-
+    /* Wait for user to start */
     while (1)
     {
         char msg = uart_receive();
 
-        // Toggle mode
         if (msg == 't') {
-            robotMode = !robotMode;
+            break;
         }
+    }
 
-        // If 0, Manual mode
-        if (robotMode == 0) {
-            if (msg == 'w')
-            {
-                oi_setWheels(250, 250);
-            }
-            else if (msg == 's')
-            {
-                oi_setWheels(-250, -250);
-            }
-            else if (msg == 'a')
-            {
-                oi_setWheels(250, -250);
-            }
-            else if (msg == 'd')
-            {
-                oi_setWheels(-250, 250);
-            }
-            else if (msg == 'm')
-            {
-                oi_setWheels(0, 0);
-                flag = 0;
-                detect_obj(); // Run object scan
-            }
-            else if (msg == 'q')
-            {
-                break; // Quit and free memory
-            }
+    /* Program Main Thread */
+    while (1) {
+        FLAG = 0;
 
-            if (sensor_data->bumpLeft == 1) { // We hit something!
-                oi_setWheels(0, 0);
-                timer_waitMillis(300);
-                avoid_bump(sensor_data, 0); // Defaults to left if both are 1 since left is checked first
-            } else if (sensor_data->bumpRight == 1) {
-                oi_setWheels(0, 0);
-                timer_waitMillis(300);
-                avoid_bump(sensor_data, 1);
-            }
+        turn_counterclockwise(sensor_data, 75); // Face the passengers
+        detect_passengers();
+        break;
 
-            oi_update(sensor_data);
-
-            timer_waitMillis(100);
-            oi_setWheels(0, 0);
-        } else {
-            // Otherwise 1, Auto mode
-            flag = 0;
-            auto_drive(sensor_data);
-        }
+        // auto_drive(sensor_data);
     }
 
     oi_free(sensor_data);

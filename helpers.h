@@ -52,4 +52,6 @@ Obstacle detect_obj();
  */
 void auto_drive(oi_t *sensor_data);
 
+void detect_passengers();
+
 #endif /* HELPERS_H_ */

@@ -7,8 +7,14 @@
 
 #include "helpers.h"
 
-volatile char flag; // Your UART interrupt can update this flag
+volatile char FLAG; // Your UART interrupt can update this flag
 int STOP_DIST;
+
+/* CyBot Properties */
+int NUM_PASSENGERS = 3;
+int DETECTED_OBJS;
+Obstacle OBJECTS[7];  // List to record found obstacles
+char DEBUG_OUTPUT[65]; // Output message to give PuTTY
 
 /**
  * Output the distance in centimeters the CyBot is away from an object using the onboard IR sensor
@@ -19,23 +25,26 @@ int measureDistIR(int raw_val)
     return 51792 * pow(raw_val, -1.149);
 }
 
+int calculateStop(int objWidth) {
+    if (objWidth != 0) { // TODO Change to range of width
+        return 1;
+    } else {
+        return 2; // TODO include a type 3
+    }
+}
+
 /**
  * Scan the environment for objects close to the Cybot using the front-facing servo IR and ultrasonic sensor
  * @returns the object with the smallest width found
  */
 Obstacle detect_obj()
 {
-    int distancesIR[90];   // Record sensor distancesd
+    int distancesIR[90];  // Record sensor distancesd
 
-    int curAngle = 0;      // Angle the sensor is currently set at
-    int i = 0;             // For loop counter
-    int j = 0;            // Counter to keep track of position in obstacles list
-    int k = 0;             // Counter for multiple scans
-    int distCount = 0;     // Record of how many distances are above normal
-    int numObs = 0;        // Object count
-
-    Obstacle obs[7]; // List to record found obstacles
-    char output[60]; // Objects output to give PuTTY
+    int curAngle = 0;     // Angle the sensor is currently set at
+    int i = 0;            // For loop counter
+    int distCount = 0;    // Record of how many distances are above normal
+    int numObs = 0;       // Object count
 
     servo_to_right(); // Return to 0 first
     timer_waitMillis(300);
@@ -43,12 +52,12 @@ Obstacle detect_obj()
     // Scan and record sensor data
     while (curAngle <= 180)
     {
-        if (flag) { break; } // Interrupt
+        if (FLAG) { break; } // Interrupt
 
         distancesIR[i] = adc_read(); // Should be averaged value via hardware
 
-        sprintf(output, "%d\t\t%d\n\r", curAngle, measureDistIR(distancesIR[i]));
-        uart_sendStr(output);
+        //sprintf(DEBUG_OUTPUT, "%d\t\t%d\n\r", curAngle, measureDistIR(distancesIR[i]));
+        //uart_sendStr(DEBUG_OUTPUT);
 
         servo_move(2);
         curAngle += 2;
@@ -78,8 +87,7 @@ Obstacle detect_obj()
                         sqrt((pow(tempObj.startDist, 2) + pow(tempObj.endDist, 2))
                                 - (2 * tempObj.startDist * tempObj.endDist * cos(tempObj.width))); // sqrt(a^2 + b^2 - 2abcos(angle)) = c
 
-                obs[j] = tempObj;
-                j++;
+                OBJECTS[numObs] = tempObj;
                 numObs++;
             }
 
@@ -88,52 +96,55 @@ Obstacle detect_obj()
     }
 
     // Second scan with PING
-    for (k = 0; k < numObs; k++)
+    for (i = 0; i < numObs; i++)
     {
         servo_to_right();
-        servo_move(obs[k].angle);
+        servo_move(OBJECTS[i].angle);
 
-        obs[k].ping = ping_read();  // Get PING at midpoint
+        OBJECTS[i].ping = ping_read();  // Get PING at midpoint
         timer_waitMillis(100);
     }
 
-    // Output list of Objects found
-    sprintf(output, "%-12s%-12s%-12s%-12s%-12s%-12s\n\r", "Object", "Angle", "PING", "IR Distance", "Width", "Linear");
-    uart_sendStr(output);
-    lcd_printf("%d", numObs); // Debug # objects
+    // Table Header
+    // sprintf(DEBUG_OUTPUT, "%-12s%-12s%-12s%-12s%-12s%-12s\n\r", "Object", "Angle", "PING", "IR Distance", "Width", "Linear");
 
-    int minWidth = obs[0].width; // Object with smallest width
+    int minWidth = OBJECTS[0].width; // Object with smallest width
     int smallIndex = 0; // Index of smallest object
 
     // Find min width
     for (i = 0; i < numObs; i++)
     {
-        if (obs[i].width < minWidth)
+        if (OBJECTS[i].width < minWidth)
         {
-            minWidth = obs[i].width;
+            minWidth = OBJECTS[i].width;
             smallIndex = i;
         }
-
-        // Output list of objects as well
-        sprintf(output,
-                "%-12d%-12d%-12d%-12d%-12d%-12d\n\r",
-                i + 1, obs[i].startAngle, obs[i].ping, obs[i].dist,
-                obs[i].width, obs[i].linearWidth);
-        uart_sendStr(output);
     }
 
-    if (numObs != 0)
+//    // Output list of objects as well
+//    sprintf(DEBUG_OUTPUT,
+//            "%-12d%-12d%-12d%-12d%-12d%-12d\n\r",
+//            i + 1, OBJECTS[i].startAngle, OBJECTS[i].ping, OBJECTS[i].dist,
+//            OBJECTS[i].width, OBJECTS[i].linearWidth);
+//    uart_sendStr(DEBUG_OUTPUT);
+
+    DETECTED_OBJS = numObs;
+    return OBJECTS[smallIndex];
+}
+
+void detect_passengers() {
+    detect_obj();
+
+    // Output Passenger List to Control Center
+    sprintf(DEBUG_OUTPUT, "%-12s%-12s%-12s%-12s\n\r", "Passenger #", "Stop", "Width", "Linear");
+    uart_sendStr(DEBUG_OUTPUT);
+
+    int i;
+    for (i = 0; i < NUM_PASSENGERS; i++)
     {
-        servo_to_right();
-        servo_move(obs[smallIndex].angle); // Point to smallest object
-
-        sprintf(output,
-                "Object %d: Drive %d cm at angle %d to reach the smallest object.\n\n\r",
-                smallIndex + 1, obs[smallIndex].dist, obs[smallIndex].startAngle);
-        uart_sendStr(output); // Output to PuTTY
+        sprintf(DEBUG_OUTPUT, "%-12d%-12d%-12d%-12d\n\r", i + 1, calculateStop(OBJECTS[i].width), OBJECTS[i].width, OBJECTS[i].linearWidth);
+        uart_sendStr(DEBUG_OUTPUT);
     }
-
-    return obs[smallIndex];
 }
 
 /**
@@ -144,8 +155,8 @@ void auto_drive(oi_t *sensor_data)
     int bumped = 1; // Flag to see if move was interrupted by bump sensor
     Obstacle smallObj;
 
-    while (!flag && bumped) { // Do auto until override or hit target <5 cm
-        smallObj = detect_obj(); // Scan again to verify distance, bump sensor may have occured preemptively
+    while (!FLAG && bumped) { // Do auto until override or hit target <5 cm
+        //smallObj = detect_obj(); // Scan again to verify distance, bump sensor may have occured preemptively
 
         if (smallObj.dist > 1000) { // No objects found?
             move_forward_bump(sensor_data, 150);

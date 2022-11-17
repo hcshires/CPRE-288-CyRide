@@ -15,7 +15,7 @@
 #include <inc/tm4c123gh6pm.h>
 #include "driverlib/interrupt.h"
 
-extern volatile char flag;
+extern volatile char FLAG;
 volatile int  time;
 
 /**
