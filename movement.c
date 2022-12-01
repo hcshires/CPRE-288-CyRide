@@ -62,6 +62,16 @@ void turn_counterclockwise(oi_t *sensor, int degrees)
     stop();
 }
 
+move_forward_auto() {
+    while (!sum)
+        
+        move
+        if bump
+            jfkdlsjafsdl;j
+        if cliff
+            jfdiklsa;jfkdlsa;j
+}
+
 void avoid_bump(oi_t *sensor, int direction)
 {
     move_backward(sensor, 250);
@@ -102,6 +112,24 @@ void avoid_bump_angle(oi_t *sensor, int angle) {
 
     else{
        turn_clockwise(sensor, 75);
+    }
+}
+
+int go_around_object(oi_t *sensor, angle) {
+    move_backward(sensor, 250);
+
+    if (angle <= 90) {
+        turn_clockwise(sensor, 45);
+        move_forward(sensor, 450);
+        turn_counterclockwise(sensor, 90);
+        move_forward(sensor, 450);
+        turn_clockwise(sensor, 45);
+    } else {
+        turn_counterclockwise(sensor, 45);
+        move_forward(sensor, 450);
+        turn_clockwise(sensor, 90);
+        move_forward(sensor, 450);
+        turn_counterclockwise(sensor, 45);
     }
 }
 
@@ -149,4 +177,36 @@ int move_forward_bump_auto(oi_t *sensor, int millimeters, int angle) {
 
     stop();
     return bumped;
+}
+
+void move_forward_stay_on_path_auto(oi_t *sensor, int millimeters, int angle) { //in progress
+    oi_setWheels(100, 100); // Set power and drive baby
+
+    double sum = 0;
+    while (sum < millimeters && !FLAG) {
+        sum += sensor->distance;
+        oi_update(sensor);
+
+        if (sensor->bumpLeft == 1 || sensor->bumpRight == 1) { // We hit something!
+            oi_setWheels(0, 0);
+            timer_waitMillis(300);
+            go_around_object(sensor, angle); // Defaults to left if both are 1 since left is checked first
+            sum += 636.4; //adds forward distance from going around aobject to sum
+        }
+        
+        if(sensor->cliffLeft == 1 || sensor->cliffFrontLeft == 1) {
+            oi_setWheels(0, 0);
+            timer_waitMillis(300);
+            move_backward(sensor, 100);
+            sum -= 100;
+            turn_clockwise(sensor, 90);
+            move_forward(sensor, 100);
+            turn_counterclockwise(sensor, 90);
+        }
+        else if(sensor->cliffRight == 1 || sensor->cliffFrontRight == 1) {
+            
+        }
+    }
+
+    stop();
 }
