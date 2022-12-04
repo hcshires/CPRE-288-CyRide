@@ -67,7 +67,6 @@ int adc_read(void) {
 
     while (!(ADC0_RIS_R & 0b0001));
 
-    //lcd_printf("I'm alive");
     adc_data = ADC0_SSFIFO0_R; // Read bit 10, AIN10
     ADC0_ISC_R |= 0b0001; // Clear interrupt
 

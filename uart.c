@@ -7,6 +7,8 @@
 #include "timer.h"
 #include "lcd.h"
 
+volatile char uart_data;
+
 void uart_init(int baud)
 {
     // Enable UART Module with RCGCUART
@@ -53,8 +55,6 @@ void uart_init(int baud)
     UART1_LCRH_R = 0b01100000; // write serial communication parameters (page 916) * 8bit and no parity
     UART1_CC_R   = 0x0; // use system clock as clock source (page 939)
     UART1_CTL_R |= 0x0001; // enable UART1
-
-    FLAG = 0;
 }
 
 void uart_sendChar(char data)
@@ -103,9 +103,15 @@ void uart_interrupt_handler()
     // STEP 1: Check the Masked Interrupt Status
     if (UART1_MIS_R & 0b000000010000) {
         // STEP 2:  Copy the data
-        // uart_data = UART1_DR_R;
+        uart_data = (char)(UART1_DR_R & 0xFF);
+
+        if (uart_data == ' ') {
+            oi_play_song(0); // Stop Requested Tone
+            lcd_printf("STOP REQUESTED");
+            uart_sendStr("Stop Requested\n\r");
+            STOP_FLAG = 1;
+        }
 
         UART1_ICR_R |= 0b00010000; // STEP 3: Interrupt Clear
-        FLAG = 1; // Throw flag
     }
 }

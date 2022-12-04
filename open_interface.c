@@ -353,7 +353,7 @@ void oi_play_song(int index) {
 
 /// Runs default go charge program; robot will search for dock
 void go_charge(void) {
-    char charging_state = 0;
+   // char charging_state = 0;
 
     /*	//Calling demo that will cause Create to seek out home base
    oi_uartSendChar(OI_OPCODE_MAX);

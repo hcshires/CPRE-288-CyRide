@@ -7,6 +7,8 @@
 #ifndef UART_H_
 #define UART_H_
 
+#include "open_interface.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <inc/tm4c123gh6pm.h>
@@ -14,10 +16,11 @@
 
 // These two varbles have been declared
 // in the file containing main
-extern volatile  char uart_data;  // Your UART interupt code can place read data here
-extern volatile  char FLAG;       // Your UART interupt can update this flag
-                                  // to indicate that it has placed new data
-                                  // in uart_data       
+extern volatile  char uart_data;  // Your UART interrupt code can place read data here
+extern volatile  char STOP_FLAG;
+extern volatile  char STOP_FLAG_2;
+extern volatile  char STOP_FLAG_3;
+
 void uart_init(int baud);
 
 void uart_sendChar(char data);

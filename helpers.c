@@ -7,14 +7,14 @@
 
 #include "helpers.h"
 
-volatile char FLAG; // Your UART interrupt can update this flag
-int STOP_DIST;
-
 /* CyBot Properties */
-int NUM_PASSENGERS = 3;
-int DETECTED_OBJS;
+int NUM_PASSENGERS = 0;
+int DETECTED_OBJS = 0;
 Obstacle OBJECTS[7];  // List to record found obstacles
 char DEBUG_OUTPUT[65]; // Output message to give PuTTY
+
+/* Global Flags */
+volatile  char STOP_FLAG;
 
 /**
  * Output the distance in centimeters the CyBot is away from an object using the onboard IR sensor
@@ -25,21 +25,13 @@ int measureDistIR(int raw_val)
     return 51792 * pow(raw_val, -1.149);
 }
 
-int calculateStop(int objWidth) {
-    if (objWidth != 0) { // TODO Change to range of width
-        return 1;
-    } else {
-        return 2; // TODO include a type 3
-    }
-}
-
 /**
  * Scan the environment for objects close to the Cybot using the front-facing servo IR and ultrasonic sensor
  * @returns the object with the smallest width found
  */
 Obstacle detect_obj()
 {
-    int distancesIR[90];  // Record sensor distancesd
+    int distancesIR[91];  // Record sensor distances
 
     int curAngle = 0;     // Angle the sensor is currently set at
     int i = 0;            // For loop counter
@@ -52,8 +44,6 @@ Obstacle detect_obj()
     // Scan and record sensor data
     while (curAngle <= 180)
     {
-        if (FLAG) { break; } // Interrupt
-
         distancesIR[i] = adc_read(); // Should be averaged value via hardware
 
         //sprintf(DEBUG_OUTPUT, "%d\t\t%d\n\r", curAngle, measureDistIR(distancesIR[i]));
@@ -65,7 +55,7 @@ Obstacle detect_obj()
     }
 
     // Iterate and find object properties
-    for (i = 0; i < 90; i++)
+    for (i = 0; i < 91; i++)
     {
         if (measureDistIR(distancesIR[i]) < 50)
         { // Max distance IR can read is 50 cm
@@ -83,9 +73,9 @@ Obstacle detect_obj()
                 tempObj.endDist = measureDistIR(distancesIR[(i - 1)]);
                 tempObj.dist = (tempObj.startDist + tempObj.endDist) / 2; // Dist midpoint
                 tempObj.width = tempObj.endAngle - tempObj.startAngle;
-                tempObj.linearWidth =
-                        sqrt((pow(tempObj.startDist, 2) + pow(tempObj.endDist, 2))
-                                - (2 * tempObj.startDist * tempObj.endDist * cos(tempObj.width))); // sqrt(a^2 + b^2 - 2abcos(angle)) = c
+                tempObj.linearWidth = tempObj.width * (M_PI / 180) * tempObj.dist;
+//                        sqrt((pow(tempObj.startDist, 2) + pow(tempObj.endDist, 2))
+//                                - (2 * tempObj.startDist * tempObj.endDist * cos(tempObj.width))); // sqrt(a^2 + b^2 - 2abcos(angle)) = c
 
                 OBJECTS[numObs] = tempObj;
                 numObs++;
@@ -121,65 +111,84 @@ Obstacle detect_obj()
         }
     }
 
-//    // Output list of objects as well
-//    sprintf(DEBUG_OUTPUT,
-//            "%-12d%-12d%-12d%-12d%-12d%-12d\n\r",
-//            i + 1, OBJECTS[i].startAngle, OBJECTS[i].ping, OBJECTS[i].dist,
-//            OBJECTS[i].width, OBJECTS[i].linearWidth);
-//    uart_sendStr(DEBUG_OUTPUT);
-
     DETECTED_OBJS = numObs;
     return OBJECTS[smallIndex];
 }
 
-void detect_passengers() {
+/**
+ *
+ */
+int detect_passengers() {
     detect_obj();
+    NUM_PASSENGERS = DETECTED_OBJS;
+
+    // Passenger Count to Control Center
+    sprintf(DEBUG_OUTPUT, "\n\rPassenger Count: %d\n\r", NUM_PASSENGERS);
+    uart_sendStr(DEBUG_OUTPUT);
 
     // Output Passenger List to Control Center
-    sprintf(DEBUG_OUTPUT, "%-12s%-12s%-12s%-12s\n\r", "Passenger #", "Stop", "Width", "Linear");
+    sprintf(DEBUG_OUTPUT, "\n\r### List of Passengers ###\n\r%-12s%-12s%-12s%-12s%-12s\n\r", "Passenger #", "Angle", "IR Distance", "Width", "Linear");
     uart_sendStr(DEBUG_OUTPUT);
 
     int i;
     for (i = 0; i < NUM_PASSENGERS; i++)
     {
-        sprintf(DEBUG_OUTPUT, "%-12d%-12d%-12d%-12d\n\r", i + 1, calculateStop(OBJECTS[i].width), OBJECTS[i].width, OBJECTS[i].linearWidth);
+        sprintf(DEBUG_OUTPUT, "%-12d%-12d%-12d%-12d%-12d\n\r", i + 1, OBJECTS[i].angle, OBJECTS[i].dist, OBJECTS[i].width, OBJECTS[i].linearWidth);
         uart_sendStr(DEBUG_OUTPUT);
     }
+
+    uart_sendStr("\n\r"); // End Table
+
+    return NUM_PASSENGERS;
 }
 
 /**
- * Move CyBot autonomously based on the location of the smallest object passed in
+ * Perform the CyRide 23 Orange Route test path autonomously
+ * Please see the Test Field diagram for a visual path. The measurements have been
+ * calculated from the diagram and used in this function.
+ *
+ * @param oi_t *sensor - Sensor object to store flags and status
  */
 void auto_drive(oi_t *sensor_data)
 {
-    int bumped = 1; // Flag to see if move was interrupted by bump sensor
-    Obstacle smallObj;
+    move_forward_auto(sensor_data, 2030); // 203 cm
+    turn_counterclockwise(sensor_data, 75); // 90 deg
+    uart_sendStr("Now approaching Stop 1\n\r");
+    move_forward_auto(sensor_data, 900);
 
-    while (!FLAG && bumped) { // Do auto until override or hit target <5 cm
-        //smallObj = detect_obj(); // Scan again to verify distance, bump sensor may have occured preemptively
-
-        if (smallObj.dist > 1000) { // No objects found?
-            move_forward_bump(sensor_data, 150);
-            bumped = 1; // Need to scan again
-        } else {
-            //move_forward_bump(sensor_data, 150); // Match bot's center with angle the sensor detected (15 cm between center and servo)
-
-            if (smallObj.angle < 90) {
-                turn_clockwise(sensor_data, (75 - smallObj.angle));
-
-                if (smallObj.angle < 65) {
-                    STOP_DIST = -100;
-                }
-            } else if (smallObj.angle > 90) { // If angle is exactly 90, don't worry about turning
-                turn_counterclockwise(sensor_data, (smallObj.angle - 75));
-
-                if (smallObj.angle > 115) {
-                    STOP_DIST = -100;
-                }
-            }
-                STOP_DIST = 100;
-
-            bumped = move_forward_bump_auto(sensor_data, (smallObj.dist * 10) - STOP_DIST, smallObj.angle);
-        }
+    // Stop 1 reached
+    if (STOP_FLAG) {
+        timer_waitMillis(3000);
+        STOP_FLAG = 0;
     }
+
+    move_forward_auto(sensor_data, 365);
+    turn_counterclockwise(sensor_data, 7); // 14 deg
+    move_forward_auto(sensor_data, 1710);
+    uart_sendStr("Now approaching Stop 2\n\r");
+    turn_counterclockwise(sensor_data, 50); // 76 deg
+
+    // Stop 2 reached
+    if (STOP_FLAG) {
+        timer_waitMillis(3000);
+        STOP_FLAG = 0;
+    }
+
+    move_forward_auto(sensor_data, 500);
+    turn_counterclockwise(sensor_data, 75); // 90 deg
+    move_forward_auto(sensor_data, 1360);
+    uart_sendStr("Now approaching Stop 3\n\r");
+    turn_clockwise(sensor_data, 75); // 90 deg
+
+    // Stop 3 reached
+    if (STOP_FLAG) {
+        timer_waitMillis(3000);
+        STOP_FLAG = 0;
+    }
+
+    move_forward_auto(sensor_data, 500);
+    turn_counterclockwise(sensor_data, 75); // 90 deg
+    move_forward_auto(sensor_data, 1670);
+    uart_sendStr("Now approaching Park & Ride Terminal\n\r");
+    turn_counterclockwise(sensor_data, 75); // 90 deg
 }

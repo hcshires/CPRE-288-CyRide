@@ -13,6 +13,7 @@
 #include "button.h"
 #include "lcd.h"
 #include "movement.h"
+#include "music.h"
 #include "open_interface.h"
 #include "ping.h"
 #include "servo.h"
@@ -48,10 +49,10 @@ void simple_mission();
 Obstacle detect_obj();
 
 /**
- * Move CyBot autonomously based on the location of the smallest object passed in
+ *
  */
 void auto_drive(oi_t *sensor_data);
 
-void detect_passengers();
+int detect_passengers();
 
 #endif /* HELPERS_H_ */
