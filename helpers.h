@@ -37,6 +37,15 @@ typedef struct Obstacle
     int linearWidth;
 } Obstacle;
 
+Obstacle OBJECTS[7];  // List to record found obstacles
+char DEBUG_OUTPUT[65]; // Output message to give PuTTY
+
+/**
+ * Output the distance in centimeters the CyBot is away from an object using the onboard IR sensor
+ * @returns the number of cm away from an object
+ */
+int measureDistIR(int raw_val);
+
 /**
  * Scan the environment for objects close to the Cybot using the front-facing servo IR and ultrasonic sensor
  * @returns the object with the smallest width found

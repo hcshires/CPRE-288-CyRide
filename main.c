@@ -54,6 +54,7 @@ void main() {
         /* Run the route only if passengers are on-board */
         if (passengerCount > 0) {
             turn_counterclockwise(sensor_data, 75); // Face the passengers, bottom right corner of test field
+            move_forward(sensor_data, 10); // Move forward a bit to add distance to sum
             auto_drive(sensor_data);
         } else {
             uart_sendStr("\n\rWaiting for passengers. Shutting down...\n\r");

@@ -9,12 +9,12 @@
 
 /* CyBot Properties */
 int NUM_PASSENGERS = 0;
-Obstacle OBJECTS[7];  // List to record found obstacles
 int DETECTED_OBJS = 0;
 char DEBUG_OUTPUT[65]; // Output message to give PuTTY
 
 /* Global Flags */
-volatile  char STOP_FLAG;
+volatile char STOP_FLAG;
+volatile char OVERRIDE_FLAG;
 
 /**
  * Output the distance in centimeters the CyBot is away from an object using the onboard IR sensor
@@ -145,11 +145,11 @@ int scan_roadway() {
     int i;
     for (i = 0; i < DETECTED_OBJS; i++) {
         if ((OBJECTS[i].angle <= 115 && OBJECTS[i].angle >= 75) && OBJECTS[i].dist <= 25) {
-            return 1;
+            return i;
         }
     }
 
-    return 0;
+    return -1;
 }
 
 /**
@@ -167,11 +167,15 @@ void auto_drive(oi_t *sensor_data)
     move_forward_auto(sensor_data, 900);
 
     // Stop 1 reached
+    uart_sendStr("Stop 1 Reached\n\r");
+
     if (STOP_FLAG) {
         timer_waitMillis(3000);
         lcd_clear();
         STOP_FLAG = 0;
     }
+
+    OVERRIDE_FLAG = 0;
 
     move_forward_auto(sensor_data, 365);
     turn_counterclockwise(sensor_data, 7); // 14 deg
@@ -180,11 +184,15 @@ void auto_drive(oi_t *sensor_data)
     turn_counterclockwise(sensor_data, 50); // 76 deg
 
     // Stop 2 reached
+    uart_sendStr("Stop 2 Reached\n\r");
+
     if (STOP_FLAG) {
         timer_waitMillis(3000);
         lcd_clear();
         STOP_FLAG = 0;
     }
+
+    OVERRIDE_FLAG = 0;
 
     move_forward_auto(sensor_data, 500);
     turn_counterclockwise(sensor_data, 75); // 90 deg
@@ -193,11 +201,14 @@ void auto_drive(oi_t *sensor_data)
     turn_clockwise(sensor_data, 75); // 90 deg
 
     // Stop 3 reached
+    uart_sendStr("Stop 3 Reached\n\r");
     if (STOP_FLAG) {
         timer_waitMillis(3000);
         lcd_clear();
         STOP_FLAG = 0;
     }
+
+    OVERRIDE_FLAG = 0;
 
     move_forward_auto(sensor_data, 500);
     turn_counterclockwise(sensor_data, 75); // 90 deg

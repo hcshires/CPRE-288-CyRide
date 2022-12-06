@@ -1,6 +1,8 @@
 #include "movement.h"
 #include "helpers.h"
 
+volatile char OVERRIDE_FLAG;
+
 /**
  * Stop the CyBot (set motor power to 0)
  */
@@ -58,7 +60,7 @@ void turn_clockwise(oi_t *sensor, int degrees)
     oi_setWheels(-100, 100); // turn via one wheel only
 
     double angle = 0;
-    while (abs(angle) < degrees) { // checking the angle to make sure not to surpass the user specifies
+    while (!OVERRIDE_FLAG && abs(angle) < degrees) { // checking the angle to make sure not to surpass the user specifies
       angle += sensor->angle;
       oi_update(sensor);
     }
@@ -77,7 +79,7 @@ void turn_counterclockwise(oi_t *sensor, int degrees)
     oi_setWheels(100, -100); // turn via one wheel only
 
     double angle = 0;
-    while (abs(angle) < degrees) { // checking the angle to make sure not to surpass the user specifies
+    while (!OVERRIDE_FLAG && abs(angle) < degrees) { // checking the angle to make sure not to surpass the user specifies
        angle += sensor->angle;
        oi_update(sensor);
     }
@@ -120,18 +122,34 @@ void move_forward_auto(oi_t *sensor, int millimeters) {
     oi_setWheels(100, 100); // Set power and drive baby
 
     double sum = 0;
-    while (sum < millimeters) {
-        /* IR Sensor Check every 50 cm */
-        if ((int)sum % 50 == 0) {
-            oi_setWheels(0, 0);
+    int distanceObj;
+    int curAngle = 90;
+    int direction = 1;
 
-            if (scan_roadway()) {
-                uart_sendStr("ALERT! Tall object present in the roadway. Manual override required.\n\r");
-                oi_setWheels(0, 0);
-                move_manual(sensor, &sum);
+    while (!OVERRIDE_FLAG && sum < millimeters) {
+        distanceObj = adc_read(); // Should be averaged value via hardware
+
+        //sprintf(DEBUG_OUTPUT, "%d\t\t%d\n\r", curAngle, measureDistIR(distancesIR[i]));
+        //uart_sendStr(DEBUG_OUTPUT);
+
+        servo_move(5 * direction);
+        if (direction == 1) {
+            if (curAngle <= 180) {
+                curAngle += 10;
             } else {
-                oi_setWheels(100, 100);
+                direction = -1;
             }
+        } else {
+            if (curAngle >= 0) {
+                curAngle -= 2;
+            } else {
+                direction = 1;
+            }
+        }
+
+        /* IR Sensor Check */
+        if (measureDistIR(distanceObj) < 25) {
+            ir_sensor_check(sensor, sum);
         }
 
         /* Bump Sensor Check */
@@ -142,14 +160,14 @@ void move_forward_auto(oi_t *sensor, int millimeters) {
 
             move_backward(sensor, 100);
             sum -= 100;
-            move_manual(sensor, &sum);
+            move_manual(sensor, &sum, 200);
 //          go_around_object(sensor, 0); // Defaults to left if both are 1 since left is checked first
 //          sum += 636.4; //adds forward distance from going around an object to sum
 
 //          go_around_object(sensor, 1); // Defaults to left if both are 1 since left is checked first
 //          sum += 636.4; //adds forward distance from going around an object to sum
-
-            oi_setWheels(100, 100); // Set power and drive baby
+            OVERRIDE_FLAG = 1;
+            break;
         }
         
         /* Cliff Sensor Check */
@@ -159,11 +177,13 @@ void move_forward_auto(oi_t *sensor, int millimeters) {
             timer_waitMillis(300);
             move_backward(sensor, 100);
             sum -= 100;
-            move_manual(sensor, &sum);
+            move_manual(sensor, &sum, 200);
 
-            oi_setWheels(100, 100);
+            OVERRIDE_FLAG = 1;
+            break;
         }
 
+        // lcd_printf("%lf", sum);
         sum += sensor->distance;
         oi_update(sensor);
     }
@@ -172,15 +192,34 @@ void move_forward_auto(oi_t *sensor, int millimeters) {
 }
 
 /**
+ *
+ */
+void ir_sensor_check(oi_t * sensor, double sum) {
+    oi_setWheels(0, 0);
+    int objIndex = scan_roadway();
+
+    if (objIndex != -1) {
+        uart_sendStr("ALERT! Tall object present in the roadway. Manual override required.\n\r");
+        oi_setWheels(0, 0);
+        move_manual(sensor, &sum, OBJECTS[objIndex].dist);
+
+        OVERRIDE_FLAG = 1;
+    } else {
+        oi_setWheels(100, 100);
+    }
+}
+
+/**
  * Manual override to drive the CyBot
  *
  * @param oi_t *sensor - Sensor object to store flags and status
  * @param double *sum - Pointer to sensor's distance sum to update autonomous after manual override completes
  */
-void move_manual(oi_t *sensor, double * sum) {
+void move_manual(oi_t *sensor, double * sum, int distance) {
     while (1)
     {
         char msg = uart_receive();
+        int angle = 0;
 
         // CyRide corrected manually, ready to return to auto drive
         if (msg == 'e') {
@@ -190,27 +229,27 @@ void move_manual(oi_t *sensor, double * sum) {
         // If 0, Manual mode
         if (msg == 'w')
         {
-            oi_setWheels(100, 100);
-            *sum += sensor->distance;
+            move_forward(sensor, 50);
+            distance -= 5;
         }
         else if (msg == 's')
         {
-            oi_setWheels(-100, -100);
-            *sum -= sensor->distance;
+            move_backward(sensor, 50);
+            distance += 5;
         }
         else if (msg == 'a')
         {
-            oi_setWheels(100, -100);
+            turn_counterclockwise(sensor, 5);
+            angle += 5;
         }
         else if (msg == 'd')
         {
-            oi_setWheels(-100, 100);
+            turn_clockwise(sensor, 5);
+            angle -= 5;
         }
 
-        oi_update(sensor);
-
-        timer_waitMillis(500);
-        oi_setWheels(0, 0);
+        sprintf(DEBUG_OUTPUT, "Move %d cm, Robot at %d degrees from origin", distance, angle);
+        uart_sendStr(DEBUG_OUTPUT);
 
     }
 

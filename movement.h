@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+extern volatile char OVERRIDE_FLAG;
+
 /**
  * Stop the CyBot (set motor power to 0)
  */
@@ -61,4 +63,9 @@ void move_forward_auto(oi_t *sensor, int millimeters);
 /**
  *
  */
-void move_manual(oi_t *sensor, double * sum);
+void ir_sensor_check(oi_t * sensor, double sum);
+
+/**
+ *
+ */
+void move_manual(oi_t *sensor, double * sum, int distance);
