@@ -9,8 +9,8 @@
 
 /* CyBot Properties */
 int NUM_PASSENGERS = 0;
-int DETECTED_OBJS = 0;
 Obstacle OBJECTS[7];  // List to record found obstacles
+int DETECTED_OBJS = 0;
 char DEBUG_OUTPUT[65]; // Output message to give PuTTY
 
 /* Global Flags */
@@ -95,9 +95,6 @@ Obstacle detect_obj()
         timer_waitMillis(100);
     }
 
-    // Table Header
-    // sprintf(DEBUG_OUTPUT, "%-12s%-12s%-12s%-12s%-12s%-12s\n\r", "Object", "Angle", "PING", "IR Distance", "Width", "Linear");
-
     int minWidth = OBJECTS[0].width; // Object with smallest width
     int smallIndex = 0; // Index of smallest object
 
@@ -142,6 +139,19 @@ int detect_passengers() {
     return NUM_PASSENGERS;
 }
 
+int scan_roadway() {
+    detect_obj();
+
+    int i;
+    for (i = 0; i < DETECTED_OBJS; i++) {
+        if ((OBJECTS[i].angle <= 115 && OBJECTS[i].angle >= 75) && OBJECTS[i].dist <= 25) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 /**
  * Perform the CyRide 23 Orange Route test path autonomously
  * Please see the Test Field diagram for a visual path. The measurements have been
@@ -159,6 +169,7 @@ void auto_drive(oi_t *sensor_data)
     // Stop 1 reached
     if (STOP_FLAG) {
         timer_waitMillis(3000);
+        lcd_clear();
         STOP_FLAG = 0;
     }
 
@@ -171,6 +182,7 @@ void auto_drive(oi_t *sensor_data)
     // Stop 2 reached
     if (STOP_FLAG) {
         timer_waitMillis(3000);
+        lcd_clear();
         STOP_FLAG = 0;
     }
 
@@ -183,6 +195,7 @@ void auto_drive(oi_t *sensor_data)
     // Stop 3 reached
     if (STOP_FLAG) {
         timer_waitMillis(3000);
+        lcd_clear();
         STOP_FLAG = 0;
     }
 

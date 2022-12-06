@@ -32,7 +32,7 @@ void main() {
     sensor_data = oi_alloc();
     oi_init(sensor_data);
 
-    load_songs(); // OI Songs
+    // load_songs(); // OI Songs
 
     /* Wait for user to start */
     while (1)

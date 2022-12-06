@@ -38,21 +38,18 @@ typedef struct Obstacle
 } Obstacle;
 
 /**
- * Move CyBot manually to smallest object, either autonomously or manually depending on the robot mode set by the user
- */
-void simple_mission();
-
-/**
  * Scan the environment for objects close to the Cybot using the front-facing servo IR and ultrasonic sensor
  * @returns the object with the smallest width found
  */
 Obstacle detect_obj();
 
+int detect_passengers();
+
+int scan_roadway();
+
 /**
  *
  */
 void auto_drive(oi_t *sensor_data);
-
-int detect_passengers();
 
 #endif /* HELPERS_H_ */

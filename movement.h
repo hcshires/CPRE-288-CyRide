@@ -57,3 +57,8 @@ void go_around_object(oi_t *sensor, int direction);
  * @param int millimeters - The distance in millimeters to move the CyBot
  */
 void move_forward_auto(oi_t *sensor, int millimeters);
+
+/**
+ *
+ */
+void move_manual(oi_t *sensor, double * sum);

@@ -10,6 +10,7 @@
 #include "ping.h"
 #include "uart.h"
 
+volatile char FLAG;
 int overflowCount; // Global detection of overflow for output
 
 /**
