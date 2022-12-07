@@ -2,6 +2,7 @@
 #include "helpers.h"
 
 volatile char OVERRIDE_FLAG;
+volatile char OBJECT_FLAG;
 
 /**
  * Stop the CyBot (set motor power to 0)
@@ -93,21 +94,34 @@ void turn_counterclockwise(oi_t *sensor, int degrees)
  * @param oi_t *sensor - Sensor object to store flags and status
  * @param int direction - The side of the CyBot that the object was detected (0 for left, 1 for right)
  */
-void go_around_object(oi_t *sensor, int direction) {
-    move_backward(sensor, 250);
-
-    if (direction == 0) { // Left or both sides
-        turn_clockwise(sensor, 45);
-        move_forward(sensor, 450);
-        turn_counterclockwise(sensor, 90);
-        move_forward(sensor, 450);
-        turn_clockwise(sensor, 45);
-    } else { // Ride side
-        turn_counterclockwise(sensor, 45);
-        move_forward(sensor, 450);
-        turn_clockwise(sensor, 90);
-        move_forward(sensor, 450);
-        turn_counterclockwise(sensor, 45);
+void go_around_object(oi_t *sensor) {
+    double target = 150; //if forward distances surpasses this, bot is past the object
+    
+    while(OBJECT_FLAG){
+        move_backward(sensor, 100); //back away from object
+        timer_waitMillis(100);
+        turn_counterclockwise(sensor, 15); //turn slightly to go around object
+        timer_waitMillis(100);
+        
+        oi_setWheels(100, 100); //start going around
+        double sum = 0; //distance traveled forward
+        while (sum < target) { //move forward until past object or another object is encountered
+            if(sensor->bumpLeft == 1 || sensor->bumpRight == 1){//check for cliffs/bump
+                uart_sendStr("ALERT! CyRide has hit a short object in the road. Manual override required.\n\r");
+                break;
+            } else if(sensor->cliffLeft == 1 || sensor->cliffFrontLeft == 1 || sensor->cliffRight == 1 || sensor->cliffFrontRight == 1){
+                uart_sendStr("ALERT! Sinkhole in the roadway. Manual override required.\n\r");
+                break;
+            }
+            sum += sensor->distance;
+            oi_update(sensor);
+        }
+        stop();
+        timer_waitMillis(300);
+        turn_clockwise(sensor, 15); //turn back to original direction
+        if(sum >= target){
+            OBJECT_FLAG = 0;
+        }
     }
 }
 
@@ -158,14 +172,8 @@ void move_forward_auto(oi_t *sensor, int millimeters) {
             oi_setWheels(0, 0);
             timer_waitMillis(300);
 
-            move_backward(sensor, 100);
-            sum -= 100;
-            move_manual(sensor, &sum, 200);
-//          go_around_object(sensor, 0); // Defaults to left if both are 1 since left is checked first
-//          sum += 636.4; //adds forward distance from going around an object to sum
-
-//          go_around_object(sensor, 1); // Defaults to left if both are 1 since left is checked first
-//          sum += 636.4; //adds forward distance from going around an object to sum
+            OBJECT_FLAG = 1;
+            go_around_object(sensor);
             OVERRIDE_FLAG = 1;
             break;
         }
@@ -175,10 +183,9 @@ void move_forward_auto(oi_t *sensor, int millimeters) {
             uart_sendStr("ALERT! Sinkhole in the roadway. Manual override required.\n\r");
             oi_setWheels(0, 0);
             timer_waitMillis(300);
-            move_backward(sensor, 100);
-            sum -= 100;
-            move_manual(sensor, &sum, 200);
-
+            
+            OBJECT_FLAG = 1;
+            go_around_object(sensor);
             OVERRIDE_FLAG = 1;
             break;
         }
