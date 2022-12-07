@@ -4,6 +4,7 @@
 volatile char OVERRIDE_FLAG;
 volatile char OBJECT_FLAG;
 
+
 /**
  * Stop the CyBot (set motor power to 0)
  */
@@ -95,32 +96,89 @@ void turn_counterclockwise(oi_t *sensor, int degrees)
  * @param int direction - The side of the CyBot that the object was detected (0 for left, 1 for right)
  */
 void go_around_object(oi_t *sensor) {
-    double target = 150; //if forward distances surpasses this, bot is past the object
-    
+    int tile_width = 650;
+    int bot_width = 400;
+    int bump_width = 150;
+    int backup_dist = 100;
+    int turn_angle = 15;
+    double target = backup_dist / (cos(turn_angle)); //if forward distances surpasses this, bot is past the object
+    double x_dist = 0;
+    double y_dist = 0;
+    char object_type;
+    int object_width;
+        
     while(OBJECT_FLAG){
-        move_backward(sensor, 100); //back away from object
+        move_backward(sensor, backup_dist); //back away from object
+        y_dist -= backup_dist;
         timer_waitMillis(100);
-        turn_counterclockwise(sensor, 15); //turn slightly to go around object
+        turn_counterclockwise(sensor, turn_angle); //turn slightly to go around object
         timer_waitMillis(100);
         
         oi_setWheels(100, 100); //start going around
         double sum = 0; //distance traveled forward
         while (sum < target) { //move forward until past object or another object is encountered
-            if(sensor->bumpLeft == 1 || sensor->bumpRight == 1){//check for cliffs/bump
-                uart_sendStr("ALERT! CyRide has hit a short object in the road. Manual override required.\n\r");
+            if(sensor->bumpLeft == 1 || sensor->bumpRight == 1){//check for bump
+                object_type = 0;
+                uart_sendStr("ALERT! CyRide has hit a short object in the road.\n\r");
                 break;
-            } else if(sensor->cliffLeft == 1 || sensor->cliffFrontLeft == 1 || sensor->cliffRight == 1 || sensor->cliffFrontRight == 1){
-                uart_sendStr("ALERT! Sinkhole in the roadway. Manual override required.\n\r");
+            } else if(sensor->cliffLeft == 1 || sensor->cliffFrontLeft == 1 || sensor->cliffRight == 1 || sensor->cliffFrontRight == 1){//check for cliff
+                object_type = 1;
+                uart_sendStr("ALERT! Sinkhole in the roadway.\n\r");
                 break;
             }
             sum += sensor->distance;
+            x_dist += sensor->distance * (sin(turn_angle));
+            y_dist += sensor->distance * (cos(turn_angle));
             oi_update(sensor);
         }
         stop();
         timer_waitMillis(300);
-        turn_clockwise(sensor, 15); //turn back to original direction
+        turn_clockwise(sensor, turn_angle); //turn back to original direction
         if(sum >= target){
-            OBJECT_FLAG = 0;
+            if(object_type){ //set distance to fully pass by the object
+                object_width = tile_width + bot_width;
+            } else{
+                object_width = bump_width + bot_width;
+            }
+            oi_setWheels(100, 100);
+            sum = 0;
+            while (sum < object_width) { //move forward until past object or another object is encountered
+                if(sensor->bumpLeft == 1 || sensor->bumpRight == 1){//check for bump
+                    uart_sendStr("ALERT! CyRide has hit a short object in the road.\n\r");
+                    object_type = 0;
+                    break;
+                } else if(sensor->cliffLeft == 1 || sensor->cliffFrontLeft == 1 || sensor->cliffRight == 1 || sensor->cliffFrontRight == 1){ //check for cliff
+                    uart_sendStr("ALERT! Sinkhole in the roadway.\n\r");
+                    object_type = 1;
+                    break;
+                }
+                sum += sensor->distance;
+                y_dist += sensor->distance;
+            }
+            stop();
+            timer_waitMillis(300);
+            if(sum >= object_width){
+                turn_clockwise(sensor, 90); //turn back towards the path
+                oi_setWheels(100, 100);
+                sum = 0;
+                while (sum < x_dist) { //move forward until back on the path or another object is encountered
+                    if(sensor->bumpLeft == 1 || sensor->bumpRight == 1){//check for bump
+                        uart_sendStr("ALERT! CyRide has hit a short object in the road.\n\r");
+                        object_type = 0;
+                        break;
+                    } else if(sensor->cliffLeft == 1 || sensor->cliffFrontLeft == 1 || sensor->cliffRight == 1 || sensor->cliffFrontRight == 1){ //check for cliff
+                        uart_sendStr("ALERT! Sinkhole in the roadway.\n\r");
+                        object_type = 1;
+                        break;
+                    }
+                    sum += sensor->distance;
+                    x_dist -= sensor->distance;
+                }
+                if(sum >= x_dist) { //made it back onto the path
+                    turn_counterclockwise(sensor, 90); //back to facing forward
+                    OBJECT_FLAG = 0; //clear flag to end outermost loop
+                }
+            }
         }
     }
 }
