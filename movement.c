@@ -1,7 +1,6 @@
 #include "movement.h"
 #include "helpers.h"
 
-volatile char OVERRIDE_FLAG;
 volatile char OBJECT_FLAG;
 
 
@@ -62,7 +61,7 @@ void turn_clockwise(oi_t *sensor, int degrees)
     oi_setWheels(-100, 100); // turn via one wheel only
 
     double angle = 0;
-    while (!OVERRIDE_FLAG && abs(angle) < degrees) { // checking the angle to make sure not to surpass the user specifies
+    while (abs(angle) < degrees) { // checking the angle to make sure not to surpass the user specifies
       angle += sensor->angle;
       oi_update(sensor);
     }
@@ -81,7 +80,7 @@ void turn_counterclockwise(oi_t *sensor, int degrees)
     oi_setWheels(100, -100); // turn via one wheel only
 
     double angle = 0;
-    while (!OVERRIDE_FLAG && abs(angle) < degrees) { // checking the angle to make sure not to surpass the user specifies
+    while (abs(angle) < degrees) { // checking the angle to make sure not to surpass the user specifies
        angle += sensor->angle;
        oi_update(sensor);
     }
@@ -154,6 +153,7 @@ void go_around_object(oi_t *sensor) {
                 }
                 sum += sensor->distance;
                 y_dist += sensor->distance;
+                oi_update(sensor);
             }
             stop();
             timer_waitMillis(300);
@@ -173,6 +173,7 @@ void go_around_object(oi_t *sensor) {
                     }
                     sum += sensor->distance;
                     x_dist -= sensor->distance;
+                    oi_update(sensor);
                 }
                 if(sum >= x_dist) { //made it back onto the path
                     turn_counterclockwise(sensor, 90); //back to facing forward
@@ -194,61 +195,39 @@ void move_forward_auto(oi_t *sensor, int millimeters) {
     oi_setWheels(100, 100); // Set power and drive baby
 
     double sum = 0;
-    int distanceObj;
-    int curAngle = 90;
-    int direction = 1;
-
-    while (!OVERRIDE_FLAG && sum < millimeters) {
-        distanceObj = adc_read(); // Should be averaged value via hardware
+    while (sum < millimeters) {
 
         //sprintf(DEBUG_OUTPUT, "%d\t\t%d\n\r", curAngle, measureDistIR(distancesIR[i]));
         //uart_sendStr(DEBUG_OUTPUT);
 
-        servo_move(5 * direction);
-        if (direction == 1) {
-            if (curAngle <= 180) {
-                curAngle += 10;
-            } else {
-                direction = -1;
-            }
-        } else {
-            if (curAngle >= 0) {
-                curAngle -= 2;
-            } else {
-                direction = 1;
-            }
-        }
-
         /* IR Sensor Check */
-        if (measureDistIR(distanceObj) < 25) {
+        if (fmod(sum, 500) <= 1.25) {
             ir_sensor_check(sensor, sum);
         }
 
         /* Bump Sensor Check */
         if (sensor->bumpLeft == 1 || sensor->bumpRight == 1) { // We hit something!
-            uart_sendStr("ALERT! CyRide has hit a short object in the road. Manual override required.\n\r");
+            uart_sendStr("ALERT! CyRide has hit a short object in the road.\n\r");
             oi_setWheels(0, 0);
             timer_waitMillis(300);
 
             OBJECT_FLAG = 1;
             go_around_object(sensor);
-            OVERRIDE_FLAG = 1;
             break;
         }
         
         /* Cliff Sensor Check */
         if (sensor->cliffLeft == 1 || sensor->cliffFrontLeft == 1 || sensor->cliffRight == 1 || sensor->cliffFrontRight == 1) {
-            uart_sendStr("ALERT! Sinkhole in the roadway. Manual override required.\n\r");
+            uart_sendStr("ALERT! Pot hole in the roadway.\n\r");
             oi_setWheels(0, 0);
             timer_waitMillis(300);
             
             OBJECT_FLAG = 1;
             go_around_object(sensor);
-            OVERRIDE_FLAG = 1;
             break;
         }
 
-        // lcd_printf("%lf", sum);
+        lcd_printf("%lf", sum);
         sum += sensor->distance;
         oi_update(sensor);
     }
@@ -263,15 +242,13 @@ void ir_sensor_check(oi_t * sensor, double sum) {
     oi_setWheels(0, 0);
     int objIndex = scan_roadway();
 
-    if (objIndex != -1) {
-        uart_sendStr("ALERT! Tall object present in the roadway. Manual override required.\n\r");
+    while (objIndex != -1) {
+        uart_sendStr("ALERT! Tall object present in the roadway. Waiting for it to cross.\n\r");
         oi_setWheels(0, 0);
-        move_manual(sensor, &sum, OBJECTS[objIndex].dist);
-
-        OVERRIDE_FLAG = 1;
-    } else {
-        oi_setWheels(100, 100);
+        objIndex = scan_roadway();
     }
+
+    oi_setWheels(100, 100);
 }
 
 /**

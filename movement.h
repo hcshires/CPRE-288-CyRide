@@ -1,11 +1,9 @@
 #include "open_interface.h"
 #include "uart.h"
-#include <math.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-extern volatile char OVERRIDE_FLAG;
 
 /**
  * Stop the CyBot (set motor power to 0)
@@ -50,7 +48,7 @@ void turn_counterclockwise(oi_t *sensor, int degrees);
  * @param oi_t *sensor - Sensor object to store flags and status
  * @param int direction - The side of the CyBot that the object was detected (0 for left, 1 for right)
  */
-void go_around_object(oi_t *sensor, int direction);
+void go_around_object(oi_t *sensor);
 
 /**
  * Move the CyBot forward a set distance with autonomous detection and correction for objects in the path

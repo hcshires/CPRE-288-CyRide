@@ -14,7 +14,6 @@ char DEBUG_OUTPUT[65]; // Output message to give PuTTY
 
 /* Global Flags */
 volatile char STOP_FLAG;
-volatile char OVERRIDE_FLAG;
 
 /**
  * Output the distance in centimeters the CyBot is away from an object using the onboard IR sensor
@@ -144,7 +143,7 @@ int scan_roadway() {
 
     int i;
     for (i = 0; i < DETECTED_OBJS; i++) {
-        if ((OBJECTS[i].angle <= 115 && OBJECTS[i].angle >= 75) && OBJECTS[i].dist <= 25) {
+        if ((OBJECTS[i].angle <= 115 && OBJECTS[i].angle >= 75) && OBJECTS[i].dist <= 50) {
             return i;
         }
     }
@@ -175,8 +174,6 @@ void auto_drive(oi_t *sensor_data)
         STOP_FLAG = 0;
     }
 
-    OVERRIDE_FLAG = 0;
-
     move_forward_auto(sensor_data, 365);
     turn_counterclockwise(sensor_data, 7); // 14 deg
     move_forward_auto(sensor_data, 1710);
@@ -192,8 +189,6 @@ void auto_drive(oi_t *sensor_data)
         STOP_FLAG = 0;
     }
 
-    OVERRIDE_FLAG = 0;
-
     move_forward_auto(sensor_data, 500);
     turn_counterclockwise(sensor_data, 75); // 90 deg
     move_forward_auto(sensor_data, 1360);
@@ -207,8 +202,6 @@ void auto_drive(oi_t *sensor_data)
         lcd_clear();
         STOP_FLAG = 0;
     }
-
-    OVERRIDE_FLAG = 0;
 
     move_forward_auto(sensor_data, 500);
     turn_counterclockwise(sensor_data, 75); // 90 deg
