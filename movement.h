@@ -1,5 +1,6 @@
 #include "open_interface.h"
 #include "uart.h"
+#include <math.h>
 
 #include <stdio.h>
 #include <stdlib.h>
