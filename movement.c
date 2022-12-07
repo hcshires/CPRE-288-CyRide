@@ -154,6 +154,7 @@ void go_around_object(oi_t *sensor) {
                 }
                 sum += sensor->distance;
                 y_dist += sensor->distance;
+                oi_update(sensor);
             }
             stop();
             timer_waitMillis(300);
@@ -173,6 +174,7 @@ void go_around_object(oi_t *sensor) {
                     }
                     sum += sensor->distance;
                     x_dist -= sensor->distance;
+                    oi_update(sensor);
                 }
                 if(sum >= x_dist) { //made it back onto the path
                     turn_counterclockwise(sensor, 90); //back to facing forward
