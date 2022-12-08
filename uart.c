@@ -9,6 +9,9 @@
 
 volatile char uart_data;
 
+/**
+ * Initialize the UART module
+ */
 void uart_init(int baud)
 {
     // Enable UART Module with RCGCUART
@@ -57,6 +60,9 @@ void uart_init(int baud)
     UART1_CTL_R |= 0x0001; // enable UART1
 }
 
+/**
+ * Send a character to the Serial terminal (PuTTY)
+ */
 void uart_sendChar(char data)
 {
    // Only transmit when FIFO is empty
@@ -64,6 +70,9 @@ void uart_sendChar(char data)
    UART1_DR_R = data;
 }
 
+/**
+ * Receive a character from the Serial terminal (from PuTTY)
+ */
 char uart_receive(void)
 {
     char data;
@@ -75,6 +84,9 @@ char uart_receive(void)
     return data;
 }
 
+/**
+ * Send a string over UART (multiple character input)
+ */
 void uart_sendStr(const char *data)
 {
     while(*data != '\0')
@@ -84,6 +96,9 @@ void uart_sendStr(const char *data)
     }
 }
 
+/**
+ * Initialize the UART interrupt
+ */
 void uart_interrupt_init()
 {
     // Enable interrupts for receiving bytes through UART1
@@ -98,6 +113,9 @@ void uart_interrupt_init()
 
 }
 
+/**
+ * Interrupt Service Routine for UART
+ */
 void uart_interrupt_handler()
 {
     // STEP 1: Check the Masked Interrupt Status

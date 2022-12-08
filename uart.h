@@ -21,16 +21,34 @@ extern volatile  char STOP_FLAG;
 extern volatile  char STOP_FLAG_2;
 extern volatile  char STOP_FLAG_3;
 
+/**
+ * Initialize the UART module
+ */
 void uart_init(int baud);
 
+/**
+ * Send a character to the Serial terminal (PuTTY)
+ */
 void uart_sendChar(char data);
 
+/**
+ * Receive a character from the Serial terminal (from PuTTY)
+ */
 char uart_receive(void);
 
+/**
+ * Send a string over UART (multiple character input)
+ */
 void uart_sendStr(const char *data);
 
+/**
+ * Initialize the UART interrupt
+ */
 void uart_interrupt_init();
 
+/**
+ * Interrupt Service Routine for UART
+ */
 void uart_interrupt_handler();
 
 #endif /* UART_H_ */

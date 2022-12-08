@@ -13,13 +13,15 @@
 #include <stdint.h>
 #include <inc/tm4c123gh6pm.h>
 
-//initialize the push buttons
+/**
+ * Initialize PORTE and configure bits 0-3 to be used as inputs for the buttons.
+ */
 void button_init();
 
-
-///Non-blocking call
-///Returns highest value button being pressed, 0 if no button pressed
+/**
+ * Returns the position of the rightmost button being pushed.
+ * @return the position of the rightmost button being pushed. 4 is the rightmost button, 1 is the leftmost button.  0 indicates no button being pressed
+ */
 uint8_t button_getButton();
-
 
 #endif /* BUTTON_H_ */

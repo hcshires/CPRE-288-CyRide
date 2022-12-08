@@ -8,12 +8,12 @@
  */
 
 /* CyBot Helper Functions */
-#include "helpers.h"
+#include "movement.h"
 
 /**
  * Utilize the CyBot PING))) sensor with a custom library
  *
- * Use CyBot 00 not 08 or 03
+ * Use CyBot 06
  */
 void main() {
     /* Init CyBot Subsystems */
@@ -45,22 +45,15 @@ void main() {
     }
 
     /* Program Main Thread */
-    while (1) {
-        uart_sendStr("Welcome to CyRide! This is #23: Orange Route\n\r");
+    uart_sendStr("Welcome to CyRide! This is #23: Orange Route\n\r");
 
-        turn_clockwise(sensor_data, 75); // Face the passengers, bottom right corner of test field
-        int passengerCount = detect_passengers();
+    turn_clockwise(sensor_data, 80); // Face the passengers, bottom right corner of test field
+    int passengerCount = detect_passengers();
 
-        /* Run the route only if passengers are on-board */
-        if (passengerCount > 0) {
-            turn_counterclockwise(sensor_data, 75); // Face the passengers, bottom right corner of test field
-            move_forward(sensor_data, 10); // Move forward a bit to add distance to sum
-            auto_drive(sensor_data);
-        } else {
-            uart_sendStr("\n\rWaiting for passengers. Shutting down...\n\r");
-            break;
-        }
-    }
+    /* Begin the route */
+    turn_counterclockwise(sensor_data, 72); // Face the passengers, bottom right corner of test field
+    move_forward(sensor_data, 10); // Move forward a bit to add distance to sum
+    auto_drive(sensor_data); // Drive the route
 
     oi_free(sensor_data);
 }
